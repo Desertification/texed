@@ -1,0 +1,3 @@
+[submodule "src/myLinkedList"]
+	path = src/myLinkedList
+	url = https://github.com/Desertification/myLinkedList.git
