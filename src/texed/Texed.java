@@ -6,11 +6,13 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 /**
  * Simple GUI for a text editor.
  */
-public class Texed extends JFrame implements DocumentListener {
+public class Texed extends JFrame implements DocumentListener, ActionListener{
     private JTextArea textArea;
     private JLabel statusLabel;
 
@@ -19,6 +21,8 @@ public class Texed extends JFrame implements DocumentListener {
      */
     public Texed() {
         super();
+
+        //Initialize window
         setTitle("Texed: simple text editor");
         setBounds(0, 0, 600, 400);
         setLocationRelativeTo(null);
@@ -29,12 +33,51 @@ public class Texed extends JFrame implements DocumentListener {
         }
         setLayout(new BorderLayout());
 
+        //ToolBar
+        JToolBar toolBar = new JToolBar("Still draggable");
+        toolBar.setFloatable(false);
+        add(toolBar, BorderLayout.PAGE_START);
+        //new button
+        JButton newButton = new JButton();
+        newButton.setIcon(new ImageIcon(ClassLoader.getSystemResource("new.png")));
+        newButton.setToolTipText("New");
+        //todo action listener
+        toolBar.add(newButton);
+        //open button
+        JButton openButton = new JButton();
+        openButton.setIcon(new ImageIcon(ClassLoader.getSystemResource("open.png")));
+        openButton.setToolTipText("Open");
+        //todo action listener
+        toolBar.add(openButton);
+        //open button
+        JButton saveButton = new JButton();
+        saveButton.setIcon(new ImageIcon(ClassLoader.getSystemResource("save.png")));
+        saveButton.setToolTipText("Save");
+        //todo action listener
+        toolBar.add(saveButton);
+        toolBar.addSeparator();
+        //undo button
+        JButton undoButton = new JButton();
+        undoButton.setIcon(new ImageIcon(ClassLoader.getSystemResource("undo.png")));
+        undoButton.setDisabledIcon(new ImageIcon(ClassLoader.getSystemResource("undo_disabled.png")));
+        undoButton.setToolTipText("Undo");
+        undoButton.setEnabled(false);
+        //todo action listener
+        toolBar.add(undoButton);
+        //redo button
+        JButton redoButton = new JButton();
+        redoButton.setIcon(new ImageIcon(ClassLoader.getSystemResource("redo.png")));
+        redoButton.setDisabledIcon(new ImageIcon(ClassLoader.getSystemResource("redo_disabled.png")));
+        redoButton.setToolTipText("Redo");
+        redoButton.setEnabled(false);
+        //todo action listener
+        toolBar.add(redoButton);
+
+        //TextArea
         textArea = new JTextArea();
         textArea.setLineWrap(false);
-
         //Registration of the callback
         textArea.getDocument().addDocumentListener(this);
-
         JScrollPane scrollPane = new JScrollPane(textArea);
         add(scrollPane);
 
@@ -75,6 +118,11 @@ public class Texed extends JFrame implements DocumentListener {
 
         // In the callback you cannot change UI elements, you need to start a new Runnable
         SwingUtilities.invokeLater(new Task("foo"));
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+
     }
 
     /**
