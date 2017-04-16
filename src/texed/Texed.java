@@ -8,13 +8,19 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 /**
  * Simple GUI for a text editor.
  */
-public class Texed extends JFrame implements DocumentListener, ActionListener{
+public class Texed extends JFrame implements DocumentListener, ActionListener {
     private JTextArea textArea;
     private JLabel statusLabel;
+    private final String OPEN = "open";
+    private String path = "";
 
     /**
      * Constructs a new GUI: A TextArea on a ScrollPane
@@ -23,7 +29,7 @@ public class Texed extends JFrame implements DocumentListener, ActionListener{
         super();
 
         //Initialize window
-        setTitle("Texed: simple text editor");
+        setTitle("Texed: simple html text editor");
         setBounds(0, 0, 600, 400);
         setLocationRelativeTo(null);
         try {
@@ -34,7 +40,7 @@ public class Texed extends JFrame implements DocumentListener, ActionListener{
         setLayout(new BorderLayout());
 
         //ToolBar
-        JToolBar toolBar = new JToolBar("Still draggable");
+        JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
         add(toolBar, BorderLayout.PAGE_START);
         //new button
@@ -47,7 +53,8 @@ public class Texed extends JFrame implements DocumentListener, ActionListener{
         JButton openButton = new JButton();
         openButton.setIcon(new ImageIcon(ClassLoader.getSystemResource("open.png")));
         openButton.setToolTipText("Open");
-        //todo action listener
+        openButton.setActionCommand(OPEN);
+        openButton.addActionListener(this);
         toolBar.add(openButton);
         //open button
         JButton saveButton = new JButton();
@@ -122,7 +129,25 @@ public class Texed extends JFrame implements DocumentListener, ActionListener{
 
     @Override
     public void actionPerformed(ActionEvent e) {
-
+        switch (e.getActionCommand()) {
+            case OPEN:
+                JFileChooser fileChooser = new JFileChooser();
+                fileChooser.addChoosableFileFilter(new HtmlFileFilter());
+                int returnVal = fileChooser.showDialog(this, "Select");
+                if (returnVal == JFileChooser.APPROVE_OPTION) { //todo warn for unsaved changes
+                    File file = fileChooser.getSelectedFile();
+                    try {
+                        String allLines = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+                        SwingUtilities.invokeLater(() -> textArea.setText(allLines));
+                        String filePath = file.getPath();
+                        SwingUtilities.invokeLater(() -> setTitle("Texed - " + filePath));
+                        path = filePath;
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                        //todo file open error dialog
+                    }
+                }
+        }
     }
 
     /**
