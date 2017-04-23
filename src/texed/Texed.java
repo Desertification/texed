@@ -13,6 +13,7 @@ import java.awt.Dimension;
 public class Texed extends JFrame implements DocumentListener {
     private JTextArea textArea;
     private JLabel statusLabel;
+    private HtmlValidationWorker htmlValidationWorker;
 
     /**
      * Constructs a new GUI: A TextArea on a ScrollPane
@@ -93,30 +94,35 @@ public class Texed extends JFrame implements DocumentListener {
         // listeners
         openButton.addActionListener(new OpenFileAction(textArea, this));
         textArea.getDocument().addDocumentListener(this); //Registration of the callback
+        htmlValidationWorker = new HtmlValidationWorker(textArea, statusLabel);
     }
 
     /**
      * Callback when changing an element
      */
     public void changedUpdate(DocumentEvent ev) {
+        htmlValidationWorker.documentChanged();
     }
 
     /**
      * Callback when deleting an element
      */
     public void removeUpdate(DocumentEvent ev) {
+        htmlValidationWorker.documentChanged();
     }
 
     /**
      * Callback when inserting an element
      */
     public void insertUpdate(DocumentEvent ev) {
-        //Check if the change is only a single character, otherwise return so it does not go in an infinite loop
-        if (ev.getLength() != 1)
-            return;
+        htmlValidationWorker.documentChanged();
 
-        // In the callback you cannot change UI elements, you need to start a new Runnable
-        SwingUtilities.invokeLater(new Task("foo"));
+//        //Check if the change is only a single character, otherwise return so it does not go in an infinite loop
+//        if (ev.getLength() != 1)
+//            return;
+//
+//        // In the callback you cannot change UI elements, you need to start a new Runnable
+//        SwingUtilities.invokeLater(new Task("foo"));
     }
 
 
