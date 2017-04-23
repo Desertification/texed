@@ -6,21 +6,13 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 
 /**
  * Simple GUI for a text editor.
  */
-public class Texed extends JFrame implements DocumentListener, ActionListener {
+public class Texed extends JFrame implements DocumentListener {
     private JTextArea textArea;
     private JLabel statusLabel;
-    private final String OPEN = "open";
-    private String path = "";
 
     /**
      * Constructs a new GUI: A TextArea on a ScrollPane
@@ -53,10 +45,8 @@ public class Texed extends JFrame implements DocumentListener, ActionListener {
         JButton openButton = new JButton();
         openButton.setIcon(new ImageIcon(ClassLoader.getSystemResource("open.png")));
         openButton.setToolTipText("Open");
-        openButton.setActionCommand(OPEN);
-        openButton.addActionListener(this);
         toolBar.add(openButton);
-        //open button
+        //save button
         JButton saveButton = new JButton();
         saveButton.setIcon(new ImageIcon(ClassLoader.getSystemResource("save.png")));
         saveButton.setToolTipText("Save");
@@ -83,8 +73,6 @@ public class Texed extends JFrame implements DocumentListener, ActionListener {
         //TextArea
         textArea = new JTextArea();
         textArea.setLineWrap(false);
-        //Registration of the callback
-        textArea.getDocument().addDocumentListener(this);
         JScrollPane scrollPane = new JScrollPane(textArea);
         add(scrollPane);
 
@@ -101,6 +89,10 @@ public class Texed extends JFrame implements DocumentListener, ActionListener {
 
         setVisible(true);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
+
+        // listeners
+        openButton.addActionListener(new OpenFileAction(textArea, this));
+        textArea.getDocument().addDocumentListener(this); //Registration of the callback
     }
 
     /**
@@ -127,28 +119,6 @@ public class Texed extends JFrame implements DocumentListener, ActionListener {
         SwingUtilities.invokeLater(new Task("foo"));
     }
 
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        switch (e.getActionCommand()) {
-            case OPEN:
-                JFileChooser fileChooser = new JFileChooser();
-                fileChooser.addChoosableFileFilter(new HtmlFileFilter());
-                int returnVal = fileChooser.showDialog(this, "Select");
-                if (returnVal == JFileChooser.APPROVE_OPTION) { //todo warn for unsaved changes
-                    File file = fileChooser.getSelectedFile();
-                    try {
-                        String allLines = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-                        SwingUtilities.invokeLater(() -> textArea.setText(allLines));
-                        String filePath = file.getPath();
-                        SwingUtilities.invokeLater(() -> setTitle("Texed - " + filePath));
-                        path = filePath;
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                        //todo file open error dialog
-                    }
-                }
-        }
-    }
 
     /**
      * Runnable: change UI elements as a result of a callback
