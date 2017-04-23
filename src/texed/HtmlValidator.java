@@ -26,12 +26,19 @@ public class HtmlValidator {
         this.html = html;
     }
 
+    // set the location where we might find the error in de textarea
     private void setErrorLocation() {
+        line = 1;
+        col = 0;
+        for (int i = 0; i < index; i++) {
+            char c = html.charAt(i);
+            updateLocation(c);
+        }
         errorLine = line;
         errorCol = col;
     }
 
-    // track the location of the char
+    //detect and follow when we go to a new line
     private void updateLocation(char c) {
         // todo handle other non visible chars as '\r'
         switch (c) {
@@ -57,17 +64,17 @@ public class HtmlValidator {
     }
 
     private void findOpenTag() throws UnexpectedClosingBracket, OpenBracketNotFound, StringNotClosedException, UnexpectedClosingTag, TagNameFormatException, ClosingBracketNotFound, UnexpectedOpeningBracket {
-        findOpenBracket();
-        findTagName();
-        findClosingBracket();
+        try{
+            findOpenBracket();
+            findTagName();
+            findClosingBracket();
+        }catch (OpenBracketNotFound ignored){}
     }
 
     private void findClosingBracket() throws UnexpectedOpeningBracket, ClosingBracketNotFound {
         setErrorLocation();
         for (int i = index; i < html.length(); i++) {
             char c = html.charAt(i);
-            updateLocation(c);
-
             if (c == '>') {
                 index = i + 1;
                 return;
@@ -79,17 +86,16 @@ public class HtmlValidator {
         throw new ClosingBracketNotFound();
     }
 
-    private void findTagName() throws UnexpectedClosingTag, TagNameFormatException, StringNotClosedException {
+    private void findTagName() throws UnexpectedClosingTag, TagNameFormatException, StringNotClosedException, ClosingBracketNotFound {
         StringBuilder name = new StringBuilder();
         setErrorLocation();
         for (int i = index; i < html.length(); i++) {
             char c = html.charAt(i);
-            updateLocation(c);
-
             if (c == ' ' || c == '>') {
                 if (name.length() > 0) {
                     tagName = name.toString();
                     index = i;
+                    line--;
                     return; // trailing space or bracket means end of name
                 } else {
                     setErrorLocation();
@@ -114,42 +120,48 @@ public class HtmlValidator {
                 name.append(c);
             }
         }
-        throw new TagNameFormatException(); // file cant end on tag name
+        throw new ClosingBracketNotFound(); // file cant end on tag name
     }
 
-    private void findClosingTag() throws UnexpectedClosingBracket, OpenBracketNotFound, StringNotClosedException, UnexpectedClosingTag, ClosingTagNotFound, TagNameFormatException, UnexpectedOpeningBracket, ClosingBracketNotFound {
+    private void findClosingTag() throws UnexpectedClosingBracket, OpenBracketNotFound, StringNotClosedException, UnexpectedClosingTag, ClosingTagNotFound, TagNameFormatException, UnexpectedOpeningBracket, ClosingBracketNotFound, ExpectedSlash {
         findOpenBracket();
         findSlash();
         String tagnameCopy = tagName;
         findTagName();
-        if (!tagnameCopy.equals(tagName)){
+        if (!tagnameCopy.equals(tagName)) {
             throw new UnexpectedClosingTag();
         }
         findClosingBracket();
     }
 
-    private void findSlash() throws ClosingTagNotFound, UnexpectedClosingBracket, UnexpectedClosingTag, TagNameFormatException, OpenBracketNotFound, UnexpectedOpeningBracket, StringNotClosedException, ClosingBracketNotFound {
+    // todo wrong logic in here somewhere, probably the code for nested tags
+    private void findSlash() throws ClosingTagNotFound, UnexpectedClosingBracket, UnexpectedClosingTag, TagNameFormatException, OpenBracketNotFound, UnexpectedOpeningBracket, StringNotClosedException, ClosingBracketNotFound, ExpectedSlash {
         setErrorLocation();
         for (int i = index; i < html.length(); i++) {
             char c = html.charAt(i);
-            updateLocation(c);
-
             if (c == '/') {
                 index = i + 1;
                 return;
-            } else { // can be nested opening tag
-                index = index - 1;
-                new HtmlValidator(html).validateInt(); //process nested tag
+            } else if (c == '>') {
+                setErrorLocation();
+                throw new ExpectedSlash();
+            } else if (Character.isAlphabetic(c) || c == '!') { // can be nested opening tag
+                index = i - 1; // back to opening tag
+                HtmlValidator htmlValidator = new HtmlValidator(html);
+                htmlValidator.index = index;
+                htmlValidator.validateInt(); //process nested tag
+                index = htmlValidator.index; //get back where we left off if no exception in validate of nested tag
+
                 findOpenBracket(); // find the open bracket again before continuing the search
             }
-        } throw new ClosingTagNotFound();
+        }
+        throw new ClosingTagNotFound();
     }
 
     private void findOpenBracket() throws UnexpectedClosingBracket, OpenBracketNotFound, StringNotClosedException {
         setErrorLocation();
         for (int i = index; i < html.length(); i++) {
             char c = html.charAt(i);
-            updateLocation(c);
             if (c == '<') {
                 index = i + 1;
                 return;
@@ -164,7 +176,7 @@ public class HtmlValidator {
         throw new OpenBracketNotFound();
     }
 
-    private void validateInt() throws UnexpectedClosingBracket, UnexpectedClosingTag, UnexpectedOpeningBracket, ClosingBracketNotFound, TagNameFormatException, StringNotClosedException, OpenBracketNotFound, ClosingTagNotFound {
+    private void validateInt() throws UnexpectedClosingBracket, UnexpectedClosingTag, UnexpectedOpeningBracket, ClosingBracketNotFound, TagNameFormatException, StringNotClosedException, OpenBracketNotFound, ClosingTagNotFound, ExpectedSlash {
         for (int i = index; i < html.length(); i++) {
             findOpenTag();
             if (!isNonClosing()) {
@@ -176,7 +188,7 @@ public class HtmlValidator {
     public HtmlValidationResult validate() {
         try {
             validateInt();
-            return new HtmlValidationResult(true,"Valid", -1,-1); // everything ok
+            return new HtmlValidationResult(true, "Valid", -1, -1); // everything ok
         } catch (HtmlException e) {
             return new HtmlValidationResult(false, e.getMessage(), errorLine, errorCol);
         }
@@ -195,7 +207,7 @@ public class HtmlValidator {
     }
 
 
-    private class HtmlValidationResult {
+    public class HtmlValidationResult {
         private boolean valid;
         private String message;
         private int line;
@@ -225,7 +237,7 @@ public class HtmlValidator {
         }
     }
 
-    private class HtmlException extends Exception{
+    private class HtmlException extends Exception {
         public HtmlException(String message) {
             super(message);
         }
@@ -276,6 +288,12 @@ public class HtmlValidator {
     private class ClosingTagNotFound extends HtmlException {
         public ClosingTagNotFound() {
             super("ClosingTagNotFound");
+        }
+    }
+
+    private class ExpectedSlash extends HtmlException {
+        public ExpectedSlash() {
+            super("ExpectedSlash");
         }
     }
 }
