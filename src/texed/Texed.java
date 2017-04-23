@@ -13,7 +13,14 @@ import java.awt.Dimension;
 public class Texed extends JFrame implements DocumentListener {
     private JTextArea textArea;
     private JLabel statusLabel;
+    private JButton undoButton;
+    private JButton redoButton;
     private HtmlValidationWorker htmlValidationWorker;
+    private UndoAction undoAction;
+
+
+    private boolean ignoreChange = false;
+    private String textCopy;
 
     /**
      * Constructs a new GUI: A TextArea on a ScrollPane
@@ -55,7 +62,7 @@ public class Texed extends JFrame implements DocumentListener {
         toolBar.add(saveButton);
         toolBar.addSeparator();
         //undo button
-        JButton undoButton = new JButton();
+        undoButton = new JButton();
         undoButton.setIcon(new ImageIcon(ClassLoader.getSystemResource("undo.png")));
         undoButton.setDisabledIcon(new ImageIcon(ClassLoader.getSystemResource("undo_disabled.png")));
         undoButton.setToolTipText("Undo");
@@ -63,7 +70,7 @@ public class Texed extends JFrame implements DocumentListener {
         //todo action listener
         toolBar.add(undoButton);
         //redo button
-        JButton redoButton = new JButton();
+        redoButton = new JButton();
         redoButton.setIcon(new ImageIcon(ClassLoader.getSystemResource("redo.png")));
         redoButton.setDisabledIcon(new ImageIcon(ClassLoader.getSystemResource("redo_disabled.png")));
         redoButton.setToolTipText("Redo");
@@ -92,15 +99,22 @@ public class Texed extends JFrame implements DocumentListener {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         // listeners
+        textCopy = textArea.getText();
         openButton.addActionListener(new OpenFileAction(textArea, this));
         textArea.getDocument().addDocumentListener(this); //Registration of the callback
         htmlValidationWorker = new HtmlValidationWorker(textArea, statusLabel);
+
+        undoAction = new UndoAction(undoButton, textArea);
+        undoButton.addActionListener(undoAction);
     }
+
+
 
     /**
      * Callback when changing an element
      */
     public void changedUpdate(DocumentEvent ev) {
+        undoAction.addUndo();
         htmlValidationWorker.documentChanged();
     }
 
@@ -108,6 +122,7 @@ public class Texed extends JFrame implements DocumentListener {
      * Callback when deleting an element
      */
     public void removeUpdate(DocumentEvent ev) {
+        undoAction.addUndo();
         htmlValidationWorker.documentChanged();
     }
 
@@ -115,14 +130,15 @@ public class Texed extends JFrame implements DocumentListener {
      * Callback when inserting an element
      */
     public void insertUpdate(DocumentEvent ev) {
+        undoAction.addUndo();
         htmlValidationWorker.documentChanged();
 
-//        //Check if the change is only a single character, otherwise return so it does not go in an infinite loop
-//        if (ev.getLength() != 1)
-//            return;
-//
-//        // In the callback you cannot change UI elements, you need to start a new Runnable
-//        SwingUtilities.invokeLater(new Task("foo"));
+        //        //Check if the change is only a single character, otherwise return so it does not go in an infinite loop
+        //        if (ev.getLength() != 1)
+        //            return;
+        //
+        //        // In the callback you cannot change UI elements, you need to start a new Runnable
+        //        SwingUtilities.invokeLater(new Task("foo"));
     }
 
 
